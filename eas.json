@@ -10,7 +10,16 @@
     "preview": {
       "distribution": "internal"
     },
-    "production": {}
+    "production": {
+      "android": {
+        "buildType": "apk",
+        "image": "latest"
+      },
+      "env": {
+        "API_URL": "https://attendance-pro.vercel.app"
+      },
+      "channel": "production"
+    }
   },
   "submit": {
     "production": {}
