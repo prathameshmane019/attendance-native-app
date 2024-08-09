@@ -3,6 +3,7 @@
     "name": "MyNewApp",
     "slug": "MyNewApp",
     "version": "1.0.0",
+    "owner": "maneprathamesh019",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
