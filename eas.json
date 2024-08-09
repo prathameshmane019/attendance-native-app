@@ -8,13 +8,15 @@
       "distribution": "internal",
       "env": {
         "API_URL": "https://attendance-pro.vercel.app"
-      }
+      },
+      "channel": "development"
     },
     "preview": {
-      "distribution": "internal"
-      , "env": {
+      "distribution": "internal",
+      "env": {
         "API_URL": "https://attendance-pro.vercel.app"
-      }
+      },
+      "channel": "preview"
     },
     "production": {
       "android": {

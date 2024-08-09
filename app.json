@@ -12,7 +12,6 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    
     "ios": {
       "supportsTablet": true
     },
@@ -30,6 +29,15 @@
       "eas": {
         "projectId": "be18c72d-f080-4b30-acce-1a9da3f40a30"
       }
-    }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/be18c72d-f080-4b30-acce-1a9da3f40a30"
+    },
+    "plugins": [
+      "expo-updates"
+    ]
   }
 }

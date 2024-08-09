@@ -2,8 +2,24 @@ import React from 'react';
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-
+import * as Updates from 'expo-updates';
 const HomeScreen = () => {
+  async function onFetchUpdateAsync() {
+    try {
+      const update = await Updates.checkForUpdateAsync();
+
+      if (update.isAvailable) {
+        await Updates.fetchUpdateAsync();
+        await Updates.reloadAsync();
+      }
+    } catch (error) {
+      alert(`Error fetching latest Expo update: ${error}`);
+    }
+  }
+
+  useEffect(() => {
+    onFetchUpdateAsync()
+  }, [])
   const router = useRouter();
 
   useFocusEffect(
@@ -12,14 +28,12 @@ const HomeScreen = () => {
         router.replace('/(auth)/login');
       };
 
-      // Use a short timeout to ensure the navigation happens after the component is fully mounted
       const timer = setTimeout(redirectToLogin, 0);
 
       return () => clearTimeout(timer);
     }, [])
   );
 
-  // Return an empty view while waiting to redirect
   return <View />;
 };
 
