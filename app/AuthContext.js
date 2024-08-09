@@ -5,6 +5,9 @@ import { useRouter } from 'expo-router';
 
 const AuthContext = createContext();
 const API_URL = process.env.API_URL
+
+console.log(API_URL);
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -12,7 +15,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     loadUser();
   }, []);
-
+  
   const loadUser = async () => {
     try {
       const token = await AsyncStorage.getItem('token');

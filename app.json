@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "MyNewApp",
+    "name": "Attendance Pro",
     "slug": "MyNewApp",
     "version": "1.0.0",
     "owner": "maneprathamesh019",
@@ -12,6 +12,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    
     "ios": {
       "supportsTablet": true
     },

@@ -28,6 +28,7 @@ export default function AttendanceApp() {
   const [attendanceRecord, setAttendanceRecord] = useState(null);
 
   const API_URL = process.env.API_URL
+  console.log(API_URL);
 
 
   useEffect(() => {
