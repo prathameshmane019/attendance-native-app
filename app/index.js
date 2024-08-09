@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Updates from 'expo-updates';
+import { useEffect } from 'react';
 const HomeScreen = () => {
   async function onFetchUpdateAsync() {
     try {
