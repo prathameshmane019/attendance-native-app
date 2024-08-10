@@ -4,23 +4,28 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Updates from 'expo-updates';
 import { useEffect } from 'react';
+import NetInfo from '@react-native-community/netinfo';
+
 const HomeScreen = () => {
   async function onFetchUpdateAsync() {
     try {
-      const update = await Updates.checkForUpdateAsync();
-
-      if (update.isAvailable) {
-        await Updates.fetchUpdateAsync();
-        await Updates.reloadAsync();
+      const netInfo = await NetInfo.fetch();
+      if (netInfo.isConnected) {
+        const update = await Updates.checkForUpdateAsync();
+        if (update.isAvailable) {
+          await Updates.fetchUpdateAsync();
+          await Updates.reloadAsync();
+        }
       }
     } catch (error) {
-      alert(`Error fetching latest Expo update: ${error}`);
+      console.error(`Error fetching latest Expo update: ${error}`);
     }
   }
 
   useEffect(() => {
-    onFetchUpdateAsync()
-  }, [])
+    onFetchUpdateAsync();
+  }, []);
+
   const router = useRouter();
 
   useFocusEffect(

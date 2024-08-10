@@ -185,13 +185,11 @@ export default function AttendanceApp() {
     setSelectedDate(date);
     hideDatePicker();
   };
-
-  return (
-    <PaperProvider>
-      <ScrollView style={styles.container}>
+  const renderContent = () => (
+    <View style={styles.container}>
+      <List.Section>
         <Card style={styles.card}>
           <Card.Content>
-            <Title>Select Options</Title>
             <Picker
               selectedValue={selectedSubject}
               onValueChange={(itemValue) => setSelectedSubject(itemValue)}
@@ -232,12 +230,6 @@ export default function AttendanceApp() {
             <Button mode="outlined" onPress={showDatePicker} style={styles.date}>
               {selectedDate.toDateString()}
             </Button>
-            <DateTimePickerModal
-              isVisible={isDatePickerVisible}
-              mode="date"
-              onConfirm={handleConfirm}
-              onCancel={hideDatePicker}
-            />
 
             <Button mode="contained" onPress={handleTakeAttendance} style={styles.button}>
               Take Attendance
@@ -247,65 +239,74 @@ export default function AttendanceApp() {
 
         {isTableVisible && (
           <>
-            <Card style={styles.card}>
-              <Card.Content>
-                <Title>Course Content</Title>
-                {subjectDetails && subjectDetails.content && subjectDetails.content.map((content) => (
-                  <List.Item
-                    key={content._id}  // Using _id as the key
-                    title={content.title}
-                    description={content.description}
-                    left={() => (
-                      <Checkbox.Android
-                        status={selectedContents.includes(content._id) || content.status === "covered" ? 'checked' : 'unchecked'}
+            <List.Accordion
+              title="Course Content"
+              left={props => <List.Icon {...props} icon="book" />}
+            >
+              <Card style={styles.card}>
+                <Card.Content>
+                  {subjectDetails && subjectDetails.content && subjectDetails.content.map((content) => (
+                    <List.Item
+                      key={content._id}
+                      title={content.title}
+                      description={content.description}
+                      right={() => (
+                        <Checkbox.Android
+                          status={selectedContents.includes(content._id) || content.status === "covered" ? 'checked' : 'unchecked'}
+                          onPress={() => {
+                            setSelectedContents(prev =>
+                              prev.includes(content._id)
+                                ? prev.filter(item => item !== content._id)
+                                : [...prev, content._id]
+                            );
+                          }}
+                          disabled={content.status === 'covered'}
+                        />
+                      )}
+                    />
+                  ))}
+                </Card.Content>
+              </Card>
+            </List.Accordion>
+
+            <List.Accordion
+              title="Students List"
+              left={props => <List.Icon {...props} icon="account-group" />}
+            >
+              <Card style={styles.card}>
+                <Card.Content>
+                  <FlatList
+                    data={students}
+                    keyExtractor={(item) => item._id}
+                    renderItem={({ item: student }) => (
+                      <Checkbox.Item
+                        label={`${student.rollNumber} - ${student.name}`}
+                        status={selectedKeys.has(student._id) ? 'checked' : 'unchecked'}
                         onPress={() => {
-                          setSelectedContents(prev =>
-                            prev.includes(content._id)
-                              ? prev.filter(item => item !== content._id)
-                              : [...prev, content._id]
-                          );
+                          setSelectedKeys(prev => {
+                            const newSet = new Set(prev);
+                            if (newSet.has(student._id)) {
+                              newSet.delete(student._id);
+                            } else {
+                              newSet.add(student._id);
+                            }
+                            return newSet;
+                          });
                         }}
-                        disabled={content.status === 'covered'}
                       />
                     )}
+                    ListHeaderComponent={() => (
+                      <Checkbox.Item
+                        label="Select All"
+                        status={selectAll ? 'checked' : 'unchecked'}
+                        onPress={handleSelectAll}
+                      />
+                    )}
+                    ItemSeparatorComponent={() => <Divider />}
                   />
-                ))}
-              </Card.Content>
-            </Card>
-            <Card style={styles.card}>
-              <Card.Content>
-                <Title>Students List</Title>
-                <FlatList
-                  data={students}
-                  keyExtractor={(item) => item._id}
-                  renderItem={({ item: student }) => (
-                    <Checkbox.Item
-                      label={`${student.rollNumber} - ${student.name}`}
-                      status={selectedKeys.has(student._id) ? 'checked' : 'unchecked'}
-                      onPress={() => {
-                        setSelectedKeys(prev => {
-                          const newSet = new Set(prev);
-                          if (newSet.has(student._id)) {
-                            newSet.delete(student._id);
-                          } else {
-                            newSet.add(student._id);
-                          }
-                          return newSet;
-                        });
-                      }}
-                    />
-                  )}
-                  ListHeaderComponent={() => (
-                    <Checkbox.Item
-                      label="Select All"
-                      status={selectAll ? 'checked' : 'unchecked'}
-                      onPress={handleSelectAll}
-                    />
-                  )}
-                  ItemSeparatorComponent={() => <Divider />}
-                />
-              </Card.Content>
-            </Card>
+                </Card.Content>
+              </Card>
+            </List.Accordion>
 
             <Button
               mode="contained"
@@ -318,9 +319,25 @@ export default function AttendanceApp() {
             </Button>
           </>
         )}
-        {fetching && <ActivityIndicator size="large" style={styles.loadingIndicator} />}
-      </ScrollView>
+      </List.Section>
 
+      {fetching && <ActivityIndicator size="large" style={styles.loadingIndicator} />}
+    </View>
+  );
+
+  return (
+    <PaperProvider>
+      <FlatList
+        data={[{ key: 'content' }]}
+        renderItem={() => renderContent()}
+        keyExtractor={item => item.key}
+      />
+      <DateTimePickerModal
+        isVisible={isDatePickerVisible}
+        mode="date"
+        onConfirm={handleConfirm}
+        onCancel={hideDatePicker}
+      />
       <Portal>
         <Dialog visible={successModalVisible} onDismiss={() => setSuccessModalVisible(false)}>
           <Dialog.Content>
@@ -342,7 +359,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
   },
   card: {
-    margin: 16,
+    margin: 12,
   },
   picker: {
     marginVertical: 5,
