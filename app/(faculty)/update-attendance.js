@@ -185,7 +185,7 @@ export default function AttendanceApp() {
     setSelectedDate(date);
     hideDatePicker();
   };
-  const renderContent = () => (
+ const renderContent = () => (
     <View style={styles.container}>
       <List.Section>
         <Card style={styles.card}>
