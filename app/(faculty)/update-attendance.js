@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, Alert, StyleSheet, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, FlatList } from 'react-native';
 import { Provider as PaperProvider, Card, Title, Paragraph, Button, Checkbox, List, Divider, Portal, Dialog } from 'react-native-paper';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import axios from 'axios';
-import { FlatList } from 'react-native';
 import getUserData from '../utils/getUser';
 
 export default function AttendanceApp() {
@@ -52,6 +51,7 @@ export default function AttendanceApp() {
   const fetchSubjectData = async () => {
     try {
       if (selectedSubject) {
+        setSelectAll(false)
         const response = await axios.get(`${API_URL}/api/utils/subjectBatch?subjectId=${selectedSubject}`);
         const { subject } = response.data;
 
@@ -185,7 +185,7 @@ export default function AttendanceApp() {
     setSelectedDate(date);
     hideDatePicker();
   };
- const renderContent = () => (
+  const renderContent = () => (
     <View style={styles.container}>
       <List.Section>
         <Card style={styles.card}>
@@ -231,7 +231,8 @@ export default function AttendanceApp() {
               {selectedDate.toDateString()}
             </Button>
 
-            <Button mode="contained" onPress={handleTakeAttendance} style={styles.button}>
+            <Button mode="contained"
+              labelStyle={styles.updateButtonLabel} onPress={handleTakeAttendance} style={styles.button}>
               Take Attendance
             </Button>
           </Card.Content>
@@ -275,45 +276,58 @@ export default function AttendanceApp() {
             >
               <Card style={styles.card}>
                 <Card.Content>
+                  <View style={styles.headerRow}>
+                    <Text style={[styles.rollNumber, styles.headerText]}>Roll No.</Text>
+                    <Text style={[styles.studentName, styles.headerText]}>Name</Text>
+                    <Text style={styles.headerText}>Present</Text>
+                  </View>
+                  <Checkbox.Item
+                    label="Select All"
+                    status={selectAll ? 'checked' : 'unchecked'}
+                    onPress={handleSelectAll}
+                    style={styles.selectAll}
+                  />
                   <FlatList
                     data={students}
                     keyExtractor={(item) => item._id}
                     renderItem={({ item: student }) => (
-                      <Checkbox.Item
-                        label={`${student.rollNumber} - ${student.name}`}
-                        status={selectedKeys.has(student._id) ? 'checked' : 'unchecked'}
-                        onPress={() => {
-                          setSelectedKeys(prev => {
-                            const newSet = new Set(prev);
-                            if (newSet.has(student._id)) {
-                              newSet.delete(student._id);
-                            } else {
-                              newSet.add(student._id);
-                            }
-                            return newSet;
-                          });
-                        }}
-                      />
-                    )}
-                    ListHeaderComponent={() => (
-                      <Checkbox.Item
-                        label="Select All"
-                        status={selectAll ? 'checked' : 'unchecked'}
-                        onPress={handleSelectAll}
-                      />
+                      <View style={styles.studentRow}>
+                        <Text style={styles.rollNumber}>{student.rollNumber}</Text>
+                        <Text style={styles.studentName}>{student.name}</Text>
+                        <Checkbox.Android
+                          status={selectedKeys.has(student._id) ? 'checked' : 'unchecked'}
+                          onPress={() => {
+                            setSelectedKeys(prev => {
+                              const newSet = new Set(prev);
+                              if (newSet.has(student._id)) {
+                                newSet.delete(student._id);
+                              } else {
+                                newSet.add(student._id);
+                              }
+                              return newSet;
+                            });
+                          }}
+                          color="#6200ee"
+                        />
+                      </View>
                     )}
                     ItemSeparatorComponent={() => <Divider />}
                   />
+                  <View style={styles.summary}>
+                    <Text style={styles.summaryItem}>Total: {students.length}</Text>
+                    <Text style={styles.summaryItem}>Present: {selectedKeys.size}</Text>
+                    <Text style={styles.summaryItem}>Absent: {students.length - selectedKeys.size}</Text>
+                  </View>
                 </Card.Content>
               </Card>
             </List.Accordion>
-
             <Button
               mode="contained"
               onPress={updateAttendance}
               style={styles.button}
               loading={loading}
               disabled={loading}
+              labelStyle={styles.updateButtonLabel}
             >
               Update Attendance
             </Button>
@@ -381,10 +395,54 @@ const styles = StyleSheet.create({
     justifyContent: "center"
 
   },
+  updateButtonLabel: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+
   sectionTitle: {
     marginVertical: 16,
   },
   loadingIndicator: {
     margin: 16,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  studentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  rollNumber: {
+    flex: 1,
+    fontSize: 16,
+  },
+  studentName: {
+    flex: 3,
+    fontSize: 16,
+  },
+  headerText: {
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  summary: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 4,
+  },
+  summaryItem: {
+    fontWeight: 'bold',
+    fontSize: 14,
   },
 });

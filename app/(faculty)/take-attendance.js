@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Alert, StyleSheet, ActivityIndicator, FlatList } from 'react-native';
+import { View, Text, Alert, StyleSheet, ActivityIndicator, FlatList } from 'react-native';
 import { Provider as PaperProvider, Card, Title, Paragraph, Button, Checkbox, List, Divider, Portal, Dialog } from 'react-native-paper';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
@@ -47,6 +47,7 @@ export default function AttendanceApp() {
   const fetchSubjectData = async () => {
     try {
       if (selectedSubject) {
+        setSelectAll(false)
         const response = await axios.get(`${API_URL}/api/utils/subjectBatch?subjectId=${selectedSubject}`);
         const { subject } = response.data;
         setSubjectDetails(subject);
@@ -217,7 +218,8 @@ export default function AttendanceApp() {
             {selectedDate.toDateString()}
           </Button>
 
-          <Button mode="contained" onPress={handleTakeAttendance} style={styles.button}>
+          <Button mode="contained"
+            labelStyle={styles.updateButtonLabel} onPress={handleTakeAttendance} style={styles.updateButton}>
             Take Attendance
           </Button>
         </Card.Content>
@@ -254,54 +256,68 @@ export default function AttendanceApp() {
               </Card.Content>
             </Card>
           </List.Accordion>
-
           <List.Accordion
             title="Students List"
             left={props => <List.Icon {...props} icon="account-group" />}
           >
             <Card style={styles.card}>
               <Card.Content>
+                <View style={styles.headerRow}>
+                  <Text style={[styles.rollNumber, styles.headerText]}>Roll No.</Text>
+                  <Text style={[styles.studentName, styles.headerText]}>Name</Text>
+                  <Text style={styles.headerText}>Present</Text>
+                </View>
+                <Checkbox.Item
+                  label="Select All"
+                  status={selectAll ? 'checked' : 'unchecked'}
+                  onPress={handleSelectAll}
+                  style={styles.selectAll}
+                />
                 <FlatList
                   data={students}
                   keyExtractor={(item) => item._id}
                   renderItem={({ item: student }) => (
-                    <Checkbox.Item
-                      label={`${student.rollNumber} - ${student.name}`}
-                      status={selectedKeys.has(student._id) ? 'checked' : 'unchecked'}
-                      onPress={() => {
-                        setSelectedKeys(prev => {
-                          const newSet = new Set(prev);
-                          if (newSet.has(student._id)) {
-                            newSet.delete(student._id);
-                          } else {
-                            newSet.add(student._id);
-                          }
-                          return newSet;
-                        });
-                      }}
-                    />
+                    <View style={styles.studentRow}>
+                      <Text style={styles.rollNumber}>{student.rollNumber}</Text>
+                      <Text style={styles.studentName}>{student.name}</Text>
+                      <Checkbox.Android
+                        status={selectedKeys.has(student._id) ? 'checked' : 'unchecked'}
+                        onPress={() => {
+                          setSelectedKeys(prev => {
+                            const newSet = new Set(prev);
+                            if (newSet.has(student._id)) {
+                              newSet.delete(student._id);
+                            } else {
+                              newSet.add(student._id);
+                            }
+                            return newSet;
+                          });
+                        }}
+                        color="#6200ee"
+                      />
+                    </View>
                   )}
-                  ListHeaderComponent={() => (
-                    <Checkbox.Item
-                      label="Select All"
-                      status={selectAll ? 'checked' : 'unchecked'}
-                      onPress={handleSelectAll}
-                    />
+                  ListFooterComponent={() => (
+                    <View style={styles.summary}>
+                      <Text style={styles.summaryItem}>Total: {students.length}</Text>
+                      <Text style={styles.summaryItem}>Present: {selectedKeys.size}</Text>
+                      <Text style={styles.summaryItem}>Absent: {students.length - selectedKeys.size}</Text>
+                    </View>
                   )}
                   ItemSeparatorComponent={() => <Divider />}
                 />
               </Card.Content>
             </Card>
           </List.Accordion>
-
           <Button
             mode="contained"
             onPress={updateAttendance}
-            style={styles.button}
+            style={styles.updateButton}
+            labelStyle={styles.updateButtonLabel}
             loading={loading}
             disabled={loading}
           >
-            Update Attendance
+            Submit Attendance
           </Button>
         </>
       )}
@@ -345,6 +361,17 @@ const styles = StyleSheet.create({
   },
   card: {
     margin: 12,
+    elevation: 4,
+  },
+  studentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  rollNumber: {
+    flex: 1,
+    fontSize: 16,
   },
   picker: {
     marginVertical: 5,
@@ -366,4 +393,50 @@ const styles = StyleSheet.create({
   loadingIndicator: {
     margin: 16,
   },
+  selectAll: {
+    paddingLeft: 0,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingRight: 8,
+  },
+  studentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingRight: 8,
+  },
+  rollNumber: {
+    flex: 1,
+    marginRight: 8,
+  },
+  studentName: {
+    flex: 3,
+  },
+  headerText: {
+    fontWeight: 'bold',
+  },
+  summary: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 16,
+    padding: 8,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 4,
+  },
+  summaryItem: {
+    fontWeight: 'bold',
+  },
+  updateButton: {
+    margin: 10,
+    backgroundColor: '#6a11cb',
+  },
+  updateButtonLabel: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+
 });
