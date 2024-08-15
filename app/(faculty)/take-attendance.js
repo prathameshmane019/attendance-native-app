@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Alert, StyleSheet, ActivityIndicator, FlatList } from 'react-native';
+import { View, Text, Alert, StyleSheet, ActivityIndicator, FlatList, ScrollView } from 'react-native';
 import { Provider as PaperProvider, Card, Title, Paragraph, Button, Checkbox, List, Divider, Portal, Dialog } from 'react-native-paper';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
@@ -13,7 +13,6 @@ export default function AttendanceApp() {
   const [selectedKeys, setSelectedKeys] = useState(new Set());
   const [selectedSession, setSelectedSession] = useState('');
   const [selectedContents, setSelectedContents] = useState([]);
-  const [sessions] = useState([1, 2, 3, 4, 5, 6, 7]);
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [profile, setProfile] = useState(null);
   const [subjectDetails, setSubjectDetails] = useState(null);
@@ -25,6 +24,8 @@ export default function AttendanceApp() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
   const [attendanceRecord, setAttendanceRecord] = useState(null);
+  const [availableSessions, setAvailableSessions] = useState([]);
+  const [selectedSessions, setSelectedSessions] = useState([]);
 
   const API_URL = process.env.API_URL;
 
@@ -41,8 +42,31 @@ export default function AttendanceApp() {
   useEffect(() => {
     if (selectedSubject) {
       fetchSubjectData();
+      fetchAvailableSessions(selectedSubject, selectedBatch);
+
     }
-  }, [selectedSubject]);
+  }, [selectedSubject, selectedBatch]);
+
+  const fetchAvailableSessions = async (subjectId, batchId) => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const response = await axios.get(`${API_URL}/api/utils/available-sessions?subjectId=${subjectId}&batchId=${batchId || ''}&date=${today}`);
+      setAvailableSessions(response.data.availableSessions);
+    } catch (error) {
+      console.error('Error fetching available sessions:', error);
+      console.log(error)
+    }
+  };
+
+  const handleSessionToggle = (session) => {
+    setSelectedSessions(prevSessions => {
+      if (prevSessions.includes(session)) {
+        return prevSessions.filter(s => s !== session);
+      } else {
+        return [...prevSessions, session];
+      }
+    });
+  };
 
   const fetchSubjectData = async () => {
     try {
@@ -201,18 +225,21 @@ export default function AttendanceApp() {
             </Picker>
           )}
 
-          <Title style={styles.sectionTitle}>Select Session</Title>
-          <Picker
-            selectedValue={selectedSession}
-            onValueChange={(itemValue) => setSelectedSession(itemValue)}
-            style={styles.picker}
-          >
-            <Picker.Item label="Select Session" value="" />
-            {sessions.map(session => (
-              <Picker.Item key={session} label={`Session ${session}`} value={session} />
-            ))}
-          </Picker>
-
+          <Title style={styles.sectionTitle}>Select Sessions</Title>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.sessionContainer}>
+              {availableSessions.map(session => (
+                <Checkbox.Item
+                  key={session}
+                  label={`${session}`}
+                  status={selectedSessions.includes(session) ? 'checked' : 'unchecked'}
+                  onPress={() => handleSessionToggle(session)}
+                  style={styles.sessionCheckbox}
+                  labelStyle={styles.sessionLabel}
+                />
+              ))}
+            </View>
+          </ScrollView>
           <Title style={styles.sectionTitle}>Select Date</Title>
           <Button mode="outlined" onPress={showDatePicker} style={styles.date}>
             {selectedDate.toDateString()}
@@ -376,6 +403,23 @@ const styles = StyleSheet.create({
   picker: {
     marginVertical: 5,
     borderBottomWidth: 3,
+  },
+  sessionContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+  },
+  sessionCheckbox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 0,
+    padding: 0,
+    marginVertical: 0,
+    height: 40, // Adjust this value to make checkboxes more compact vertically
+  },
+  sessionLabel: {
+    fontSize: 14, // Reduce font size if needed
+    marginLeft: -8, // Adjust this value to move label closer to checkbox
   },
   button: {
     margin: 10,
