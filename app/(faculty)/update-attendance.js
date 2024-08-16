@@ -54,12 +54,10 @@ export default function AttendanceApp() {
         setSelectAll(false)
         const response = await axios.get(`${API_URL}/api/utils/subjectBatch?subjectId=${selectedSubject}`);
         const { subject } = response.data;
-
         console.log(subject);
 
         setSubjectDetails(subject);
         console.log("subject details ", subjectDetails);
-
         setBatches(subject.batch);
       }
 

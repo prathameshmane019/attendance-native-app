@@ -11,7 +11,6 @@ export default function AttendanceApp() {
   const [isTableVisible, setIsTableVisible] = useState(false);
   const [students, setStudents] = useState([]);
   const [selectedKeys, setSelectedKeys] = useState(new Set());
-  const [selectedSession, setSelectedSession] = useState('');
   const [selectedContents, setSelectedContents] = useState([]);
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -23,7 +22,6 @@ export default function AttendanceApp() {
   const [fetching, setFetching] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
-  const [attendanceRecord, setAttendanceRecord] = useState(null);
   const [availableSessions, setAvailableSessions] = useState([]);
   const [selectedSessions, setSelectedSessions] = useState([]);
 
@@ -66,6 +64,8 @@ export default function AttendanceApp() {
         return [...prevSessions, session];
       }
     });
+    console.log(selectedSessions);
+    
   };
 
   const fetchSubjectData = async () => {
@@ -83,33 +83,31 @@ export default function AttendanceApp() {
   };
 
   useEffect(() => {
-    if (selectedSubject && selectedDate && selectedSession) {
+    if (selectedSubject && selectedDate &&  selectedSessions) {
+      console.log(selectedSessions);
       if (subjectDetails && (subjectDetails.subType === 'practical' || subjectDetails.subType === 'tg')) {
         if (selectedBatch) {
           fetchSubjectDetails();
         }
-      } else if (selectedSubject && selectedSession) {
+      } else if (selectedSubject &&  selectedSessions) {
+        console.log(selectedSessions,selectedSubject);
         fetchSubjectDetails();
+
       }
     }
-  }, [selectedSubject, selectedDate, selectedSession, selectedBatch, subjectDetails]);
+  }, [selectedSubject, selectedDate, selectedSessions, selectedBatch, subjectDetails]);
 
   const fetchSubjectDetails = async () => {
-    if (selectedSubject && selectedSession && selectedDate) {
+    if (selectedSubject &&  selectedSessions && selectedDate) {
       try {
         setFetching(true);
-        const response = await axios.get(`${API_URL}/api/update`, {
-          params: {
-            subjectId: selectedSubject,
-            date: selectedDate.toISOString().split("T")[0],
-            session: selectedSession,
-            batchId: subjectDetails && subjectDetails.subType !== 'theory' ? selectedBatch : undefined
-          }
-        });
+        const response = await axios.get(`${API_URL}/api/utils/batches?_id=${selectedSubject}&batchId=${selectedBatch || ''}`);
 
         const { students, attendanceRecord } = response.data;
+        console.log(response.data);
+        
         setStudents(students ? students.sort((a, b) => parseInt(a.rollNumber) - parseInt(b.rollNumber)) : []);
-        setAttendanceRecord(attendanceRecord);
+        
 
         if (attendanceRecord) {
           setSelectedKeys(new Set(attendanceRecord.records.filter(r => r.status === "present").map(r => r.student)));
@@ -136,7 +134,7 @@ export default function AttendanceApp() {
       return;
     }
 
-    if (!selectedSession) {
+    if (!selectedSessions) {
       Alert.alert("Error", "Please select a session");
       return;
     }
@@ -150,7 +148,7 @@ export default function AttendanceApp() {
     const attendanceData = {
       subject: selectedSubject,
       date: selectedDate.toISOString().split("T")[0],
-      session: selectedSession,
+      session: selectedSessions,
       attendanceRecords,
       contents: selectedContents,
       batchId: selectedBatch
@@ -170,7 +168,7 @@ export default function AttendanceApp() {
       setSelectedSubject("Subject");
       setSelectedBatch(null);
       setIsTableVisible(false);
-      setSelectedSession('');
+      setSelectedSessions([]);
       setSelectedKeys(new Set());
     }
   };
