@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Alert, StyleSheet, ActivityIndicator, FlatList, ScrollView } from 'react-native';
-import { Provider as PaperProvider, Card, Title, Paragraph, Button, Checkbox, List, Divider, Portal, Dialog } from 'react-native-paper';
+import { View, Text, Alert, StyleSheet, ActivityIndicator, FlatList, ScrollView, TextInput, TouchableOpacity } from 'react-native';
+import { Provider as PaperProvider, Card, Title, Paragraph, Button, Checkbox, List, Divider, Portal, Dialog, IconButton } from 'react-native-paper';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import axios from 'axios';
@@ -24,6 +24,7 @@ export default function AttendanceApp() {
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
   const [availableSessions, setAvailableSessions] = useState([]);
   const [selectedSessions, setSelectedSessions] = useState([]);
+  const [pointsDiscussed, setPointsDiscussed] = useState(['']);
 
   const API_URL = process.env.API_URL;
 
@@ -41,7 +42,6 @@ export default function AttendanceApp() {
     if (selectedSubject) {
       fetchSubjectData();
       fetchAvailableSessions(selectedSubject, selectedBatch);
-
     }
   }, [selectedSubject, selectedBatch]);
 
@@ -52,7 +52,6 @@ export default function AttendanceApp() {
       setAvailableSessions(response.data.availableSessions);
     } catch (error) {
       console.error('Error fetching available sessions:', error);
-      console.log(error)
     }
   };
 
@@ -64,14 +63,12 @@ export default function AttendanceApp() {
         return [...prevSessions, session];
       }
     });
-    console.log(selectedSessions);
-    
   };
 
   const fetchSubjectData = async () => {
     try {
       if (selectedSubject) {
-        setSelectAll(false)
+        setSelectAll(false);
         const response = await axios.get(`${API_URL}/api/utils/subjectBatch?subjectId=${selectedSubject}`);
         const { subject } = response.data;
         setSubjectDetails(subject);
@@ -83,31 +80,26 @@ export default function AttendanceApp() {
   };
 
   useEffect(() => {
-    if (selectedSubject && selectedDate &&  selectedSessions) {
-      console.log(selectedSessions);
+    if (selectedSubject && selectedDate && selectedSessions) {
       if (subjectDetails && (subjectDetails.subType === 'practical' || subjectDetails.subType === 'tg')) {
         if (selectedBatch) {
           fetchSubjectDetails();
         }
-      } else if (selectedSubject &&  selectedSessions) {
-        console.log(selectedSessions,selectedSubject);
+      } else if (selectedSubject && selectedSessions) {
         fetchSubjectDetails();
-
       }
     }
   }, [selectedSubject, selectedDate, selectedSessions, selectedBatch, subjectDetails]);
 
   const fetchSubjectDetails = async () => {
-    if (selectedSubject &&  selectedSessions && selectedDate) {
+    if (selectedSubject && selectedSessions && selectedDate) {
       try {
         setFetching(true);
         const response = await axios.get(`${API_URL}/api/utils/batches?_id=${selectedSubject}&batchId=${selectedBatch || ''}`);
 
         const { students, attendanceRecord } = response.data;
-        console.log(response.data);
-        
+
         setStudents(students ? students.sort((a, b) => parseInt(a.rollNumber) - parseInt(b.rollNumber)) : []);
-        
 
         if (attendanceRecord) {
           setSelectedKeys(new Set(attendanceRecord.records.filter(r => r.status === "present").map(r => r.student)));
@@ -134,7 +126,7 @@ export default function AttendanceApp() {
       return;
     }
 
-    if (!selectedSessions) {
+    if (!selectedSessions.length) {
       Alert.alert("Error", "Please select a session");
       return;
     }
@@ -150,8 +142,10 @@ export default function AttendanceApp() {
       date: selectedDate.toISOString().split("T")[0],
       session: selectedSessions,
       attendanceRecords,
-      contents: selectedContents,
-      batchId: selectedBatch
+      batchId: selectedBatch,
+      ...(subjectDetails.subType === 'tg'
+        ? { pointsDiscussed: pointsDiscussed.filter(point => point.trim() !== '') }
+        : { contents: selectedContents })
     };
 
     setLoading(true);
@@ -170,6 +164,7 @@ export default function AttendanceApp() {
       setIsTableVisible(false);
       setSelectedSessions([]);
       setSelectedKeys(new Set());
+      setPointsDiscussed(['']);
     }
   };
 
@@ -252,35 +247,77 @@ export default function AttendanceApp() {
 
       {isTableVisible && (
         <>
-          <List.Accordion
-            title="Course Content"
-            left={props => <List.Icon {...props} icon="book" />}
-          >
-            <Card style={styles.card}>
-              <Card.Content>
-                {subjectDetails && subjectDetails.content && subjectDetails.content.map((content) => (
-                  <List.Item
-                    key={content._id}
-                    title={content.title}
-                    description={content.description}
-                    right={() => (
-                      <Checkbox.Android
-                        status={selectedContents.includes(content._id) || content.status === "covered" ? 'checked' : 'unchecked'}
-                        onPress={() => {
-                          setSelectedContents(prev =>
-                            prev.includes(content._id)
-                              ? prev.filter(item => item !== content._id)
-                              : [...prev, content._id]
-                          );
+          {subjectDetails && subjectDetails.subType === 'tg' ? (
+            <List.Accordion
+              title="TG Session Points"
+              left={props => <List.Icon {...props} icon="clipboard-text" />}
+            >
+              <Card style={styles.card}>
+                <Card.Content>
+                  {pointsDiscussed.map((point, index) => (
+                    <View key={index} style={styles.pointInputContainer}>
+                      <TextInput
+                        value={point}
+                        onChangeText={(text) => {
+                          const newPoints = [...pointsDiscussed];
+                          newPoints[index] = text;
+                          setPointsDiscussed(newPoints);
                         }}
-                        disabled={content.status === 'covered'}
+                        style={styles.pointInput}
+                        placeholder={`Point ${index + 1}`}
                       />
-                    )}
-                  />
-                ))}
-              </Card.Content>
-            </Card>
-          </List.Accordion>
+                      <IconButton
+                        icon="close-circle"
+                        size={20}
+                        onPress={() => {
+                          const newPoints = pointsDiscussed.filter((_, i) => i !== index);
+                          setPointsDiscussed(newPoints.length ? newPoints : ['']);
+                        }}
+                      />
+                    </View>
+                  ))}
+                  <Button
+                    mode="contained"
+                    onPress={() => setPointsDiscussed([...pointsDiscussed, ''])}
+                    style={styles.updateButton}
+                    labelStyle={styles.updateButtonLabel}
+                  >
+                    Add Point
+                  </Button>
+                </Card.Content>
+              </Card>
+            </List.Accordion>
+          ) : (
+            <List.Accordion
+              title="Course Content"
+              left={props => <List.Icon {...props} icon="book" />}
+            >
+              <Card style={styles.card}>
+                <Card.Content>
+                  {subjectDetails && subjectDetails.content && subjectDetails.content.map((content) => (
+                    <List.Item
+                      key={content._id}
+                      title={content.title}
+                      description={content.description}
+                      right={() => (
+                        <Checkbox.Android
+                          status={selectedContents.includes(content._id) || content.status === "covered" ? 'checked' : 'unchecked'}
+                          onPress={() => {
+                            setSelectedContents(prev =>
+                              prev.includes(content._id)
+                                ? prev.filter(item => item !== content._id)
+                                : [...prev, content._id]
+                            );
+                          }}
+                          disabled={content.status === 'covered'}
+                        />
+                      )}
+                    />
+                  ))}
+                </Card.Content>
+              </Card>
+            </List.Accordion>
+          )}
           <List.Accordion
             title="Students List"
             left={props => <List.Icon {...props} icon="account-group" />}
@@ -302,25 +339,27 @@ export default function AttendanceApp() {
                   data={students}
                   keyExtractor={(item) => item._id}
                   renderItem={({ item: student }) => (
-                    <View style={styles.studentRow}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSelectedKeys(prev => {
+                          const newSet = new Set(prev);
+                          if (newSet.has(student._id)) {
+                            newSet.delete(student._id);
+                          } else {
+                            newSet.add(student._id);
+                          }
+                          return newSet;
+                        });
+                      }}
+                      style={styles.studentRow}
+                    >
                       <Text style={styles.rollNumber}>{student.rollNumber}</Text>
                       <Text style={styles.studentName}>{student.name}</Text>
                       <Checkbox.Android
                         status={selectedKeys.has(student._id) ? 'checked' : 'unchecked'}
-                        onPress={() => {
-                          setSelectedKeys(prev => {
-                            const newSet = new Set(prev);
-                            if (newSet.has(student._id)) {
-                              newSet.delete(student._id);
-                            } else {
-                              newSet.add(student._id);
-                            }
-                            return newSet;
-                          });
-                        }}
                         color="#6200ee"
                       />
-                    </View>
+                    </TouchableOpacity>
                   )}
                   ListFooterComponent={() => (
                     <View style={styles.summary}>
@@ -380,28 +419,6 @@ export default function AttendanceApp() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f0f0f0',
-  },
-  card: {
-    margin: 12,
-    elevation: 4,
-  },
-  studentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  rollNumber: {
-    flex: 1,
-    fontSize: 16,
-  },
-  picker: {
-    marginVertical: 5,
-    borderBottomWidth: 3,
-  },
   sessionContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -413,50 +430,26 @@ const styles = StyleSheet.create({
     marginRight: 0,
     padding: 0,
     marginVertical: 0,
-    height: 40, // Adjust this value to make checkboxes more compact vertically
+    height: 40,
   },
   sessionLabel: {
-    fontSize: 14, // Reduce font size if needed
-    marginLeft: -8, // Adjust this value to move label closer to checkbox
+    fontSize: 14,
+    marginLeft: -8,
   },
   button: {
     margin: 10,
     backgroundColor: '#6a11cb',
     color: "#f0f0f0"
   },
-  date: {
-    marginVertical: 10,
-    marginHorizontal: "auto",
-    justifyContent: "center"
-  },
+
   sectionTitle: {
     marginVertical: 16,
   },
-  loadingIndicator: {
-    margin: 16,
-  },
+
   selectAll: {
     paddingLeft: 0,
   },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingRight: 8,
-  },
-  studentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingRight: 8,
-  },
-  rollNumber: {
-    flex: 1,
-    marginRight: 8,
-  },
-  studentName: {
-    flex: 3,
-  },
+
   headerText: {
     fontWeight: 'bold',
   },
@@ -480,5 +473,100 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  container: {
+    flex: 3,
+    backgroundColor: '#f0f0f0',
 
+  },
+  card: {
+    margin: 10,
+    padding: 1, // Remove any default padding
+  },
+  cardContent: {
+    paddingHorizontal: 0, // Remove horizontal padding
+  },
+  picker: {
+    marginVertical: 5,
+    borderBottomWidth: 3,
+
+  },
+  sessionContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  button: {
+    margin: 10,
+    backgroundColor: '#6a11cb',
+    color: "#f0f0f0"
+  },
+  date: {
+    marginVertical: 10,
+    marginHorizontal: "auto",
+    justifyContent: "center"
+
+  },
+
+
+  sectionTitle: {
+    marginVertical: 16,
+  },
+  loadingIndicator: {
+    margin: 16,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  studentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 1,
+    width: '100%',
+    justifyContent: 'space-between',
+
+  },
+  rollNumber: {
+    width: 50, // Adjust as needed
+    marginRight: 10,
+  },
+  studentName: {
+    flex: 3,
+    fontSize: 16,
+  },
+  headerText: {
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  summary: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+    padding: 10,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 4,
+  },
+  summaryItem: {
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  pointInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    margin: 'auto'
+  },
+  pointInput: {
+    flex: 1,
+    width: 40,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 6,
+    fontSize: 16,
+  },
 });

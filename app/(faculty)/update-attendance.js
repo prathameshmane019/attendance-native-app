@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, FlatList } from 'react-native';
-import { Provider as PaperProvider, Card, Title, Paragraph, Button, Checkbox, List, Divider, Portal, Dialog } from 'react-native-paper';
+import { View, Text, Alert, StyleSheet, ActivityIndicator, FlatList, ScrollView, TextInput, TouchableOpacity } from 'react-native';
+import { Provider as PaperProvider, Card, Title, Paragraph, Button, Checkbox, List, Divider, Portal, Dialog, IconButton } from 'react-native-paper';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import axios from 'axios';
@@ -25,6 +25,7 @@ export default function AttendanceApp() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
   const [attendanceRecord, setAttendanceRecord] = useState(null);
+  const [pointsDiscussed, setPointsDiscussed] = useState(['']);
 
   const API_URL = process.env.API_URL
   console.log(API_URL);
@@ -115,7 +116,6 @@ export default function AttendanceApp() {
   const handleTakeAttendance = () => {
     setIsTableVisible(true);
   };
-
   const updateAttendance = async () => {
     if (selectedSubject === "Subject") {
       Alert.alert("Error", "Please select a subject");
@@ -138,8 +138,10 @@ export default function AttendanceApp() {
       date: selectedDate.toISOString().split("T")[0],
       session: selectedSession,
       attendanceRecords,
-      contents: selectedContents, // Now this will be an array of content _ids
-      batchId: selectedBatch
+      batchId: selectedBatch,
+      ...(subjectDetails.subType === 'tg' 
+        ? { pointsDiscussed: pointsDiscussed.filter(point => point.trim() !== '') } 
+        : { contents: selectedContents })
     };
 
 
@@ -187,7 +189,7 @@ export default function AttendanceApp() {
     <View style={styles.container}>
       <List.Section>
         <Card style={styles.card}>
-          <Card.Content>
+        <Card.Content >
             <Picker
               selectedValue={selectedSubject}
               onValueChange={(itemValue) => setSelectedSubject(itemValue)}
@@ -238,12 +240,53 @@ export default function AttendanceApp() {
 
         {isTableVisible && (
           <>
+            {subjectDetails && subjectDetails.subType === 'tg' ? (
+              <List.Accordion
+                title="TG Session Points"
+                left={props => <List.Icon {...props} icon="clipboard-text" />}
+              >
+                <Card style={styles.card}>
+                <Card.Content >
+                    {pointsDiscussed.map((point, index) => (
+                      <View key={index} style={styles.pointInputContainer}>
+                        <TextInput
+                          value={point}
+                          onChangeText={(text) => {
+                            const newPoints = [...pointsDiscussed];
+                            newPoints[index] = text;
+                            setPointsDiscussed(newPoints);
+                          }}
+                          style={styles.pointInput}
+                          placeholder={`Point ${index + 1}`}
+                        />
+                        <IconButton
+                          icon="close-circle"
+                          size={24}
+                          onPress={() => {
+                            const newPoints = pointsDiscussed.filter((_, i) => i !== index);
+                            setPointsDiscussed(newPoints.length ? newPoints : ['']);
+                          }}
+                        />
+                      </View>
+                    ))}
+                    <Button
+                      mode="contained"
+                      style={styles.button}
+                      onPress={() => setPointsDiscussed([...pointsDiscussed, ''])}
+                      labelStylestyle={styles.updateButtonLabel}
+                    >
+                      Add Point
+                    </Button>
+                  </Card.Content>
+                </Card>
+              </List.Accordion>
+            ) : (
             <List.Accordion
               title="Course Content"
               left={props => <List.Icon {...props} icon="book" />}
             >
               <Card style={styles.card}>
-                <Card.Content>
+              <Card.Content style={styles.cardContent} >
                   {subjectDetails && subjectDetails.content && subjectDetails.content.map((content) => (
                     <List.Item
                       key={content._id}
@@ -267,13 +310,13 @@ export default function AttendanceApp() {
                 </Card.Content>
               </Card>
             </List.Accordion>
-
+            )}
             <List.Accordion
               title="Students List"
               left={props => <List.Icon {...props} icon="account-group" />}
             >
               <Card style={styles.card}>
-                <Card.Content>
+              <Card.Content style={styles.cardContent} >
                   <View style={styles.headerRow}>
                     <Text style={[styles.rollNumber, styles.headerText]}>Roll No.</Text>
                     <Text style={[styles.studentName, styles.headerText]}>Name</Text>
@@ -283,31 +326,34 @@ export default function AttendanceApp() {
                     label="Select All"
                     status={selectAll ? 'checked' : 'unchecked'}
                     onPress={handleSelectAll}
-                    style={styles.selectAll}
+                    // style={styles.selectAll}
+                     color="#6200ee"
                   />
                   <FlatList
                     data={students}
                     keyExtractor={(item) => item._id}
                     renderItem={({ item: student }) => (
-                      <View style={styles.studentRow}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setSelectedKeys(prev => {
+                            const newSet = new Set(prev);
+                            if (newSet.has(student._id)) {
+                              newSet.delete(student._id);
+                            } else {
+                              newSet.add(student._id);
+                            }
+                            return newSet;
+                          });
+                        }}
+                        style={styles.studentRow}
+                      >
                         <Text style={styles.rollNumber}>{student.rollNumber}</Text>
                         <Text style={styles.studentName}>{student.name}</Text>
                         <Checkbox.Android
                           status={selectedKeys.has(student._id) ? 'checked' : 'unchecked'}
-                          onPress={() => {
-                            setSelectedKeys(prev => {
-                              const newSet = new Set(prev);
-                              if (newSet.has(student._id)) {
-                                newSet.delete(student._id);
-                              } else {
-                                newSet.add(student._id);
-                              }
-                              return newSet;
-                            });
-                          }}
                           color="#6200ee"
                         />
-                      </View>
+                      </TouchableOpacity>
                     )}
                     ItemSeparatorComponent={() => <Divider />}
                   />
@@ -336,7 +382,6 @@ export default function AttendanceApp() {
       {fetching && <ActivityIndicator size="large" style={styles.loadingIndicator} />}
     </View>
   );
-
   return (
     <PaperProvider>
       <FlatList
@@ -367,11 +412,16 @@ export default function AttendanceApp() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flex: 3,
     backgroundColor: '#f0f0f0',
+  
   },
   card: {
-    margin: 12,
+    margin: 10,
+    padding: 1, // Remove any default padding
+  },
+  cardContent: {
+    paddingHorizontal: 0, // Remove horizontal padding
   },
   picker: {
     marginVertical: 5,
@@ -409,19 +459,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 4,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
   studentRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 1,
+    width: '100%',
+    justifyContent: 'space-between',
+
   },
   rollNumber: {
-    flex: 1,
-    fontSize: 16,
+    width: 50, // Adjust as needed
+    marginRight: 10,
   },
   studentName: {
     flex: 3,
@@ -435,12 +488,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 16,
-    padding: 16,
+    padding: 10,
     backgroundColor: '#f0f0f0',
     borderRadius: 4,
   },
   summaryItem: {
     fontWeight: 'bold',
     fontSize: 14,
+  },
+  
+  pointInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    margin:'auto'
+  },
+  pointInput: {
+    flex: 1,
+    width: 40,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 6,
+    fontSize: 16, 
   },
 });
