@@ -139,8 +139,8 @@ export default function AttendanceApp() {
       session: selectedSession,
       attendanceRecords,
       batchId: selectedBatch,
-      ...(subjectDetails.subType === 'tg' 
-        ? { pointsDiscussed: pointsDiscussed.filter(point => point.trim() !== '') } 
+      ...(subjectDetails.subType === 'tg'
+        ? { pointsDiscussed: pointsDiscussed.filter(point => point.trim() !== '') }
         : { contents: selectedContents })
     };
 
@@ -185,11 +185,26 @@ export default function AttendanceApp() {
     setSelectedDate(date);
     hideDatePicker();
   };
+
+  const sortedStudents = students.slice().sort((a, b) => {
+    // Extract the numeric part of the roll number
+    const aNumericPart = parseInt(a.rollNumber.replace(/\D/g, ''), 10);
+    const bNumericPart = parseInt(b.rollNumber.replace(/\D/g, ''), 10);
+
+    // Compare the numeric parts of the roll numbers
+    if (aNumericPart !== bNumericPart) {
+      return aNumericPart - bNumericPart;
+    } else {
+      // If the numeric parts are the same, compare the entire roll numbers as strings
+      return a.rollNumber.localeCompare(b.rollNumber);
+    }
+  });
+
   const renderContent = () => (
     <View style={styles.container}>
       <List.Section>
         <Card style={styles.card}>
-        <Card.Content >
+          <Card.Content >
             <Picker
               selectedValue={selectedSubject}
               onValueChange={(itemValue) => setSelectedSubject(itemValue)}
@@ -246,7 +261,7 @@ export default function AttendanceApp() {
                 left={props => <List.Icon {...props} icon="clipboard-text" />}
               >
                 <Card style={styles.card}>
-                <Card.Content >
+                  <Card.Content >
                     {pointsDiscussed.map((point, index) => (
                       <View key={index} style={styles.pointInputContainer}>
                         <TextInput
@@ -281,42 +296,43 @@ export default function AttendanceApp() {
                 </Card>
               </List.Accordion>
             ) : (
-            <List.Accordion
-              title="Course Content"
-              left={props => <List.Icon {...props} icon="book" />}
-            >
-              <Card style={styles.card}>
-              <Card.Content style={styles.cardContent} >
-                  {subjectDetails && subjectDetails.content && subjectDetails.content.map((content) => (
-                    <List.Item
-                      key={content._id}
-                      title={content.title}
-                      description={content.description}
-                      right={() => (
-                        <Checkbox.Android
-                          status={selectedContents.includes(content._id) || content.status === "covered" ? 'checked' : 'unchecked'}
-                          onPress={() => {
-                            setSelectedContents(prev =>
-                              prev.includes(content._id)
-                                ? prev.filter(item => item !== content._id)
-                                : [...prev, content._id]
-                            );
-                          }}
-                          disabled={content.status === 'covered'}
-                        />
-                      )}
-                    />
-                  ))}
-                </Card.Content>
-              </Card>
-            </List.Accordion>
+              <List.Accordion
+                title="Course Content"
+                left={props => <List.Icon {...props} icon="book" />}
+              >
+                <Card style={styles.card}>
+                  <Card.Content style={styles.cardContent} >
+                    {subjectDetails && subjectDetails.content && subjectDetails.content.map((content) => (
+                      <List.Item
+                        key={content._id}
+                        title={content.title}
+                        description={content.description}
+                        right={() => (
+                          <Checkbox.Android
+                            status={selectedContents.includes(content._id) || content.status === "covered" ? 'checked' : 'unchecked'}
+                            onPress={() => {
+                              setSelectedContents(prev =>
+                                prev.includes(content._id)
+                                  ? prev.filter(item => item !== content._id)
+                                  : [...prev, content._id]
+                              );
+                            }}
+                            disabled={content.status === 'covered'}
+                          />
+                        )}
+                      />
+                    ))}
+                  </Card.Content>
+                </Card>
+              </List.Accordion>
             )}
+
             <List.Accordion
               title="Students List"
               left={props => <List.Icon {...props} icon="account-group" />}
             >
               <Card style={styles.card}>
-              <Card.Content style={styles.cardContent} >
+                <Card.Content>
                   <View style={styles.headerRow}>
                     <Text style={[styles.rollNumber, styles.headerText]}>Roll No.</Text>
                     <Text style={[styles.studentName, styles.headerText]}>Name</Text>
@@ -326,11 +342,10 @@ export default function AttendanceApp() {
                     label="Select All"
                     status={selectAll ? 'checked' : 'unchecked'}
                     onPress={handleSelectAll}
-                    // style={styles.selectAll}
-                     color="#6200ee"
+                    style={styles.selectAll}
                   />
                   <FlatList
-                    data={students}
+                    data={sortedStudents}
                     keyExtractor={(item) => item._id}
                     renderItem={({ item: student }) => (
                       <TouchableOpacity
@@ -355,16 +370,19 @@ export default function AttendanceApp() {
                         />
                       </TouchableOpacity>
                     )}
+                    ListFooterComponent={() => (
+                      <View style={styles.summary}>
+                        <Text style={styles.summaryItem}>Total: {students.length}</Text>
+                        <Text style={styles.summaryItem}>Present: {selectedKeys.size}</Text>
+                        <Text style={styles.summaryItem}>Absent: {students.length - selectedKeys.size}</Text>
+                      </View>
+                    )}
                     ItemSeparatorComponent={() => <Divider />}
                   />
-                  <View style={styles.summary}>
-                    <Text style={styles.summaryItem}>Total: {students.length}</Text>
-                    <Text style={styles.summaryItem}>Present: {selectedKeys.size}</Text>
-                    <Text style={styles.summaryItem}>Absent: {students.length - selectedKeys.size}</Text>
-                  </View>
                 </Card.Content>
               </Card>
             </List.Accordion>
+
             <Button
               mode="contained"
               onPress={updateAttendance}
@@ -414,7 +432,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 3,
     backgroundColor: '#f0f0f0',
-  
+
   },
   card: {
     margin: 10,
@@ -473,7 +491,7 @@ const styles = StyleSheet.create({
 
   },
   rollNumber: {
-    width: 50, // Adjust as needed
+    maxWidth: 70, // Adjust as needed
     marginRight: 10,
   },
   studentName: {
@@ -496,12 +514,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 14,
   },
-  
+
   pointInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 6,
-    margin:'auto'
+    margin: 'auto'
   },
   pointInput: {
     flex: 1,
@@ -510,6 +528,6 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     borderRadius: 8,
     padding: 6,
-    fontSize: 16, 
+    fontSize: 16,
   },
 });

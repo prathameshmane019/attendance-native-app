@@ -190,6 +190,19 @@ export default function AttendanceApp() {
     hideDatePicker();
   };
 
+  const sortedStudents = students.slice().sort((a, b) => {
+    // Extract the numeric part of the roll number
+    const aNumericPart = parseInt(a.rollNumber.replace(/\D/g, ''), 10);
+    const bNumericPart = parseInt(b.rollNumber.replace(/\D/g, ''), 10);
+
+    // Compare the numeric parts of the roll numbers
+    if (aNumericPart !== bNumericPart) {
+      return aNumericPart - bNumericPart;
+    } else {
+      // If the numeric parts are the same, compare the entire roll numbers as strings
+      return a.rollNumber.localeCompare(b.rollNumber);
+    }
+  });
   const renderItem = ({ item }) => (
     <View>
       <Card style={styles.card}>
@@ -336,7 +349,7 @@ export default function AttendanceApp() {
                   style={styles.selectAll}
                 />
                 <FlatList
-                  data={students}
+                  data={sortedStudents}
                   keyExtractor={(item) => item._id}
                   renderItem={({ item: student }) => (
                     <TouchableOpacity
