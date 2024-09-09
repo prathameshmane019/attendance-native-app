@@ -2,6 +2,7 @@ import React from 'react';
 import { Stack } from 'expo-router';
 import { AuthProvider } from './AuthContext';
 import LogoutButton from './components/logout';
+import UpdateCheckScreen from './components/UpdateScreenCheck';
 import { Provider as PaperProvider } from "react-native-paper";
 import { customTheme } from './theme';
 export default function Layout() {
@@ -10,7 +11,12 @@ export default function Layout() {
       <PaperProvider  theme={customTheme}>
         <Stack
           screenOptions={{
-            headerRight: () => <LogoutButton />,
+            headerRight: () => (
+              <>
+                <LogoutButton />
+                <UpdateCheckScreen />
+              </>
+            ),
             headerTintColor: '#fff'
              // This hides the header for all screens
           }}
@@ -55,7 +61,16 @@ export default function Layout() {
           <Stack.Screen name="(auth)/ResetPasswordScreen" options={{ title: 'Reset Password', 
             headerShown:false
           }} />
-        </Stack>
+           <Stack.Screen 
+            name="update-info" 
+            options={{ title: 'Update Information',headerStyle: {
+              backgroundColor: '#6a11cb',
+            },
+            headerTintColor: '#fff',
+            headerTitleStyle: {
+              fontWeight: 'bold',
+            }, }} />
+        </Stack>      
       </PaperProvider>
     </AuthProvider>
   );

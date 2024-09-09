@@ -22,6 +22,5 @@ export default function LogoutButton() {
 }
 const styles = StyleSheet.create({
   logoutButton: {
-
   }
 })
